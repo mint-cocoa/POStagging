@@ -34,15 +34,17 @@ class DataLoader(data.Dataset):
             ner_tags = []
             for line in lines.splitlines():
                 if line.strip():
-                    # NER 데이터 형식에 맞게 수정 (단어\t개체명태그)
                     try:
-                        word, tag = line.split('\t')
-                        # 기본값은 'O' (Outside) 태그
-                        ner_tag = tag if tag in ['B-PER', 'I-PER', 'B-ORG', 'I-ORG', 
-                                               'B-LOC', 'I-LOC', 'B-MISC', 'I-MISC'] else 'O'
-                    except ValueError:
-                        word = line
-                        ner_tag = 'O'
+                        # 라인 형식: index|word POS chunk NER
+                        parts = line.strip().split('|')[1].split()
+                        if len(parts) >= 4:  # NER 태그가 있는 경우
+                            word = parts[0]
+                            ner_tag = parts[3]  # NER 태그는 마지막 컬럼
+                        else:
+                            word = parts[0]
+                            ner_tag = 'O'
+                    except (IndexError, ValueError):
+                        continue
                     
                     words.append(word)
                     ner_tags.append(ner_tag)
@@ -58,10 +60,8 @@ class DataLoader(data.Dataset):
             save_vocab(args.vocab_path, target_list)
         
         self.vocab = load_vocab(args.vocab_path)
-
         self.tag2idx = {tag: idx for idx, tag in enumerate(self.vocab)}
         self.idx2tag = {idx: tag for idx, tag in enumerate(self.vocab)}
-
 
     def __len__(self):
         return len(self.source_list)
